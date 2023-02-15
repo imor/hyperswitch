@@ -99,7 +99,6 @@ where
         response: response.map_or_else(|| Err(types::ErrorResponse::default()), Ok),
         amount_captured: payment_data.payment_intent.amount_captured,
         access_token: None,
-        session_token: None,
     };
 
     Ok(router_data)
@@ -432,6 +431,7 @@ impl<F: Clone> TryFrom<PaymentData<F>> for types::PaymentsAuthorizeData {
             browser_info,
             email: payment_data.email,
             order_details,
+            session_token: None,
         })
     }
 }

@@ -170,6 +170,7 @@ pub trait PreVerify:
 pub trait Payment:
     api_types::ConnectorCommon
     + PaymentAuthorize
+    + api::ConnectorIntegration<PreAuthorize, types::PreAuthorizeData, types::PaymentsResponseData>
     + PaymentSync
     + PaymentCapture
     + PaymentVoid

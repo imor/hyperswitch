@@ -80,6 +80,7 @@ impl WorldlineTest {
             browser_info: None,
             order_details: None,
             email: None,
+            session_token: None,
         })
     }
 }

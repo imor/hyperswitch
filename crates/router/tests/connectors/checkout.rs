@@ -47,6 +47,7 @@ fn construct_payment_router_data() -> types::PaymentsAuthorizeRouterData {
             browser_info: None,
             order_details: None,
             email: None,
+            session_token: None,
         },
         response: Err(types::ErrorResponse::default()),
         payment_method_id: None,
@@ -54,7 +55,6 @@ fn construct_payment_router_data() -> types::PaymentsAuthorizeRouterData {
         connector_meta_data: None,
         amount_captured: None,
         access_token: None,
-        session_token: None,
     }
 }
 
@@ -92,7 +92,7 @@ fn construct_refund_router_data<F>() -> types::RefundsRouterData<F> {
         address: PaymentAddress::default(),
         amount_captured: None,
         access_token: None,
-        session_token: None,
+        // session_token: None,
     }
 }
 

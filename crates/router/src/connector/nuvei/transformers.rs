@@ -6,7 +6,7 @@ use error_stack::{IntoReport, ResultExt};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    connector::utils::{CardData, PaymentsCancelRequestData, RouterData},
+    connector::utils::{CardData, PaymentsCancelRequestData, PaymentsRequestData, RouterData},
     core::errors,
     types::{self, api, storage::enums},
 };
@@ -216,15 +216,8 @@ impl<F, T>
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             status: enums::AttemptStatus::Pending,
-            session_token: Some(item.response.session_token),
-            response: Ok(types::PaymentsResponseData::TransactionResponse {
-                resource_id: types::ResponseId::ConnectorTransactionId(
-                    item.response.client_request_id,
-                ),
-                redirection_data: None,
-                redirect: false,
-                mandate_reference: None,
-                connector_metadata: None,
+            response: Ok(types::PaymentsResponseData::SessionTokenResponse {
+                session_token: item.response.session_token,
             }),
             ..item.data
         })

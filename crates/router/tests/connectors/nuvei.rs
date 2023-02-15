@@ -106,7 +106,7 @@ async fn should_sync_authorized_payment() {
             }),
             Some(PaymentInfo {
                 connector_meta_data: Some(json!({
-                    "session_token": authorize_response.session_token.unwrap()
+                    "session_token": authorize_response.request.session_token.unwrap()
                 })),
                 ..Default::default()
             }),
@@ -201,7 +201,7 @@ async fn should_sync_auto_captured_payment() {
             }),
             Some(PaymentInfo {
                 connector_meta_data: Some(json!({
-                    "session_token": authorize_response.session_token.unwrap()
+                    "session_token": authorize_response.request.session_token.unwrap()
                 })),
                 ..Default::default()
             }),

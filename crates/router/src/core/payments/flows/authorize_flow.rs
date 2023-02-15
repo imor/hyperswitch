@@ -5,7 +5,7 @@ use crate::{
     core::{
         errors::{ConnectorErrorExt, RouterResult},
         mandate,
-        payments::{self, access_token, transformers, PaymentData},
+        payments::{self, access_token, session_token, transformers, PaymentData},
     },
     routes::AppState,
     scheduler::metrics,
@@ -52,6 +52,7 @@ impl Feature<api::Authorize, types::PaymentsAuthorizeData> for types::PaymentsAu
         customer: &Option<storage::Customer>,
         call_connector_action: payments::CallConnectorAction,
         merchant_account: &storage::MerchantAccount,
+        session_token: Option<types::SessionTokenResult>,
     ) -> RouterResult<Self> {
         let resp = self
             .decide_flow(
@@ -61,6 +62,7 @@ impl Feature<api::Authorize, types::PaymentsAuthorizeData> for types::PaymentsAu
                 Some(true),
                 call_connector_action,
                 merchant_account,
+                session_token,
             )
             .await;
 
@@ -77,9 +79,20 @@ impl Feature<api::Authorize, types::PaymentsAuthorizeData> for types::PaymentsAu
     ) -> RouterResult<types::AddAccessTokenResult> {
         access_token::add_access_token(state, connector, merchant_account, self).await
     }
+
+    async fn get_session_token<'a>(
+        &self,
+        state: &AppState,
+        connector: &api::ConnectorData,
+    ) -> RouterResult<Option<types::SessionTokenResult>> {
+        Ok(Some(
+            session_token::session_token(self, state, connector).await?,
+        ))
+    }
 }
 
 impl types::PaymentsAuthorizeRouterData {
+    #[allow(clippy::too_many_arguments)]
     pub async fn decide_flow<'a, 'b>(
         &'b mut self,
         state: &'a AppState,
@@ -88,6 +101,7 @@ impl types::PaymentsAuthorizeRouterData {
         confirm: Option<bool>,
         call_connector_action: payments::CallConnectorAction,
         merchant_account: &storage::MerchantAccount,
+        session_token: Option<types::SessionTokenResult>,
     ) -> RouterResult<Self> {
         match confirm {
             Some(true) => {
@@ -97,10 +111,9 @@ impl types::PaymentsAuthorizeRouterData {
                     types::PaymentsAuthorizeData,
                     types::PaymentsResponseData,
                 > = connector.connector.get_connector_integration();
-                connector_integration
-                    .execute_pretasks(self, state)
-                    .await
-                    .map_err(|error| error.to_payment_failed_response())?;
+
+                self.request.session_token = session_token.map(|s| s.session_token);
+
                 let resp = services::execute_connector_processing_step(
                     state,
                     connector_integration,
