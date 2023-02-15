@@ -22,8 +22,8 @@ use crate::{core::errors, services};
 
 pub type PaymentsAuthorizeRouterData =
     RouterData<api::Authorize, PaymentsAuthorizeData, PaymentsResponseData>;
-pub type PaymentsPreAuthorizeRouterData =
-    RouterData<api::PreAuthorize, PreAuthorizeData, PaymentsResponseData>;
+pub type PaymentsAuthorizeSessionTokenRouterData =
+    RouterData<api::AuthorizeSessionToken, AuthorizeSessionTokenData, PaymentsResponseData>;
 pub type PaymentsSyncRouterData = RouterData<api::PSync, PaymentsSyncData, PaymentsResponseData>;
 pub type PaymentsCaptureRouterData =
     RouterData<api::Capture, PaymentsCaptureData, PaymentsResponseData>;
@@ -53,8 +53,11 @@ pub type RefundsResponseRouterData<F, R> =
 
 pub type PaymentsAuthorizeType =
     dyn services::ConnectorIntegration<api::Authorize, PaymentsAuthorizeData, PaymentsResponseData>;
-pub type PaymentsPreAuthorizeType =
-    dyn services::ConnectorIntegration<api::PreAuthorize, PreAuthorizeData, PaymentsResponseData>;
+pub type PaymentsAuthorizeSessionTokenType = dyn services::ConnectorIntegration<
+    api::AuthorizeSessionToken,
+    AuthorizeSessionTokenData,
+    PaymentsResponseData,
+>;
 pub type PaymentsSyncType =
     dyn services::ConnectorIntegration<api::PSync, PaymentsSyncData, PaymentsResponseData>;
 pub type PaymentsCaptureType =
@@ -131,7 +134,7 @@ pub struct PaymentsCaptureData {
 }
 
 #[derive(Debug, Clone)]
-pub struct PreAuthorizeData {
+pub struct AuthorizeSessionTokenData {
     pub amount_to_capture: Option<i64>,
     pub currency: storage_enums::Currency,
     pub connector_transaction_id: String,
@@ -394,7 +397,7 @@ impl Default for ErrorResponse {
     }
 }
 
-impl From<&PaymentsAuthorizeRouterData> for PreAuthorizeData {
+impl From<&PaymentsAuthorizeRouterData> for AuthorizeSessionTokenData {
     fn from(data: &PaymentsAuthorizeRouterData) -> Self {
         Self {
             amount_to_capture: data.amount_captured,

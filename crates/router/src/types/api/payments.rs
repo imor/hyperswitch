@@ -66,7 +66,7 @@ impl super::Router for PaymentsRequest {}
 pub struct Authorize;
 
 #[derive(Debug, Clone)]
-pub struct PreAuthorize;
+pub struct AuthorizeSessionToken;
 #[derive(Debug, Clone)]
 pub struct Capture;
 
@@ -170,8 +170,11 @@ pub trait PreVerify:
 pub trait Payment:
     api_types::ConnectorCommon
     + PaymentAuthorize
-    + api::ConnectorIntegration<PreAuthorize, types::PreAuthorizeData, types::PaymentsResponseData>
-    + PaymentSync
+    + api::ConnectorIntegration<
+        AuthorizeSessionToken,
+        types::AuthorizeSessionTokenData,
+        types::PaymentsResponseData,
+    > + PaymentSync
     + PaymentCapture
     + PaymentVoid
     + PreVerify

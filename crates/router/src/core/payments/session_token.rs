@@ -19,15 +19,15 @@ where
     F: Clone + 'static,
     Req: Clone + 'static,
     Res: Clone + 'static,
-    types::PreAuthorizeData: From<&'rd types::RouterData<F, Req, Res>>,
+    types::AuthorizeSessionTokenData: From<&'rd types::RouterData<F, Req, Res>>,
 {
-    let session_token_request_data = types::PreAuthorizeData::from(router_data);
+    let session_token_request_data = types::AuthorizeSessionTokenData::from(router_data);
 
     let session_token_response_data: Result<types::PaymentsResponseData, types::ErrorResponse> =
         Err(types::ErrorResponse::default());
 
     let session_token_router_data =
-        helpers::router_data_type_conversion::<_, api_types::PreAuthorize, _, _, _, _>(
+        helpers::router_data_type_conversion::<_, api_types::AuthorizeSessionToken, _, _, _, _>(
             router_data.clone(),
             session_token_request_data,
             session_token_response_data,
@@ -35,8 +35,8 @@ where
 
     let connector_integration: services::BoxedConnectorIntegration<
         'static,
-        api_types::PreAuthorize,
-        types::PreAuthorizeData,
+        api_types::AuthorizeSessionToken,
+        types::AuthorizeSessionTokenData,
         types::PaymentsResponseData,
     > = connector.connector.get_connector_integration();
 

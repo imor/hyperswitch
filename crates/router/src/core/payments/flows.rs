@@ -70,8 +70,8 @@ macro_rules! default_imp_for_sessions{
     ($($path:ident::$connector:ident),*)=> {
         $(impl
             services::ConnectorIntegration<
-            api::PreAuthorize,
-            types::PreAuthorizeData,
+            api::AuthorizeSessionToken,
+            types::AuthorizeSessionTokenData,
             types::PaymentsResponseData,
         > for $path::$connector
         {}

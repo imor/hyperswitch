@@ -181,9 +181,11 @@ fn encode_payload(
     Ok(hex::encode(digest))
 }
 
-impl TryFrom<&types::PaymentsPreAuthorizeRouterData> for NuveiSessionRequest {
+impl TryFrom<&types::PaymentsAuthorizeSessionTokenRouterData> for NuveiSessionRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: &types::PaymentsPreAuthorizeRouterData) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: &types::PaymentsAuthorizeSessionTokenRouterData,
+    ) -> Result<Self, Self::Error> {
         let connector_meta: NuveiAuthType = NuveiAuthType::try_from(&item.connector_auth_type)?;
         let merchant_id = connector_meta.merchant_id;
         let merchant_site_id = connector_meta.merchant_site_id;
