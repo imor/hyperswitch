@@ -14,6 +14,7 @@ mod fiserv;
 mod globalpay;
 mod mollie;
 mod multisafepay;
+mod nmi;
 mod nuvei;
 mod payu;
 mod rapyd;
