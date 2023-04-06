@@ -7,7 +7,9 @@ use error_stack::{ResultExt, IntoReport};
 
 use crate::{
     configs::settings,
-    utils::{self, BytesExt},
+    connector::utils as conn_utils,
+    db::StorageInterface,
+    utils::{self, ByteSliceExt},
     core::{
         errors::{self, CustomResult},
     },
@@ -16,7 +18,7 @@ use crate::{
         self,
         api::{self, ConnectorCommon, ConnectorCommonExt},
         ErrorResponse, Response,
-    }
+    },
 };
 
 
@@ -252,13 +254,7 @@ impl
         req: &types::PaymentsSyncRouterData,
         connectors: &settings::Connectors,
     ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
-        Ok(Some(
-            services::RequestBuilder::new()
-                .method(services::Method::Get)
-                .url(&types::PaymentsSyncType::get_url(self, req, connectors)?)
-                .headers(types::PaymentsSyncType::get_headers(self, req, connectors)?)
-                .build(),
-        ))
+        Ok(None)
     }
 
     fn handle_response(
@@ -266,12 +262,8 @@ impl
         data: &types::PaymentsSyncRouterData,
         res: Response,
     ) -> CustomResult<types::PaymentsSyncRouterData, errors::ConnectorError> {
-        let response: cashtocode:: CashtocodePaymentsResponse = res
-            .response
-            .parse_struct("cashtocode PaymentsSyncResponse")
-            .switch()?;
         types::RouterData::try_from(types::ResponseRouterData {
-            response,
+            response: cashtocode::CashtocodePaymentsSyncResponse{},
             data: data.clone(),
             http_code: res.status_code,
         })
@@ -476,24 +468,104 @@ impl
 
 #[async_trait::async_trait]
 impl api::IncomingWebhook for Cashtocode {
+
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &api::IncomingWebhookRequestDetails<'_>,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        let base64_signature = conn_utils::get_header_key_value("authorization", request.headers)?;
+        logger::info!(base64_signature);
+        let signature = base64_signature.as_bytes().to_owned();
+        Ok(signature)
+    }
+
+    async fn get_webhook_source_verification_merchant_secret(
+        &self,
+        db: &dyn StorageInterface,
+        merchant_id: &str,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        let key = format!("wh_mer_sec_verification_{}_{}", self.id(), merchant_id);
+        let secret = db
+            .get_key(&key)
+            .await
+            .change_context(errors::ConnectorError::WebhookVerificationSecretNotFound)?;
+
+        Ok(secret)
+    }
+
+    async fn verify_webhook_source(
+        &self,
+        db: &dyn StorageInterface,
+        request: &api::IncomingWebhookRequestDetails<'_>,
+        merchant_id: &str,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        let signature = self
+            .get_webhook_source_verification_signature(request)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let secret = self
+            .get_webhook_source_verification_merchant_secret(db, merchant_id)
+            .await
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let secret_auth = String::from_utf8(secret.to_vec())
+            .into_report()
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Could not convert secret to UTF-8")?;
+        let signature_auth = String::from_utf8(signature.to_vec())
+        .into_report()
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+        .attach_printable("Could not convert secret to UTF-8")?;
+        let mut success = true;
+        if signature_auth == secret_auth {
+            success = true;
+        }
+        Ok(success)
+    }
+
     fn get_webhook_object_reference_id(
         &self,
-        _request: &api::IncomingWebhookRequestDetails<'_>,
+        request: &api::IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(errors::ConnectorError::WebhooksNotImplemented).into_report()
+        let webhook: transformers::CashtocodeIncomingWebhook = request
+            .body
+            .parse_struct("CashtocodeIncomingWebhook")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+
+        Ok(webhook.transaction_id)
     }
 
     fn get_webhook_event_type(
         &self,
         _request: &api::IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<api::IncomingWebhookEvent, errors::ConnectorError> {
-        Err(errors::ConnectorError::WebhooksNotImplemented).into_report()
+        Ok(api::IncomingWebhookEvent::PaymentIntentSuccess)
     }
 
     fn get_webhook_resource_object(
         &self,
-        _request: &api::IncomingWebhookRequestDetails<'_>,
+        request: &api::IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<serde_json::Value, errors::ConnectorError> {
-        Err(errors::ConnectorError::WebhooksNotImplemented).into_report()
+        let webhook: transformers::CashtocodeIncomingWebhook = request
+            .body
+            .parse_struct("CashtocodeIncomingWebhook")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+        let response = webhook.transaction_id;
+        let res_json =
+            utils::Encode::<transformers::CashtocodeIncomingWebhook>::encode_to_value(&response)
+                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        Ok(res_json)
+    }
+
+    fn get_webhook_api_response(
+        &self,
+        request: &api::IncomingWebhookRequestDetails<'_>,
+    ) -> CustomResult<services::api::ApplicationResponse<serde_json::Value>, errors::ConnectorError>
+    {
+        let status = "EXECUTED".to_string();
+        let id = self
+        .get_webhook_object_reference_id(request)
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let response :  serde_json::Value = serde_json::json!({ "status": status, "transactionId" : id});
+        Ok(services::api::ApplicationResponse::Json(response))
     }
 }

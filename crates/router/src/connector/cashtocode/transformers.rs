@@ -163,6 +163,10 @@ pub struct CashtocodePaymentsResponse {
     pub pay_url: String,
 }
 
+pub struct CashtocodePaymentsSyncResponse {
+
+}
+
 impl<F,T> TryFrom<types::ResponseRouterData<F, CashtocodePaymentsResponse, T, types::PaymentsResponseData>> for types::RouterData<F, T, types::PaymentsResponseData> {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: types::ResponseRouterData<F, CashtocodePaymentsResponse, T, types::PaymentsResponseData>) -> Result<Self,Self::Error> {
@@ -175,8 +179,25 @@ impl<F,T> TryFrom<types::ResponseRouterData<F, CashtocodePaymentsResponse, T, ty
         Ok(Self {
             status: enums::AttemptStatus::AuthenticationPending,
             response: Ok(types::PaymentsResponseData::TransactionResponse {
-                resource_id: types::ResponseId::NoResponseId,
+                resource_id: types::ResponseId::ConnectorTransactionId(item.data.attempt_id.clone()),
                 redirection_data: Some(redirection_data),
+                mandate_reference: None,
+                connector_metadata: None,
+            }),
+            ..item.data
+        })
+    }
+}
+
+
+impl<F,T> TryFrom<types::ResponseRouterData<F, CashtocodePaymentsSyncResponse, T, types::PaymentsResponseData>> for types::RouterData<F, T, types::PaymentsResponseData> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: types::ResponseRouterData<F, CashtocodePaymentsSyncResponse, T, types::PaymentsResponseData>) -> Result<Self,Self::Error> {
+        Ok(Self {
+            status: enums::AttemptStatus::Charged,
+            response: Ok(types::PaymentsResponseData::TransactionResponse {
+                resource_id: types::ResponseId::ConnectorTransactionId(item.data.attempt_id.clone()),
+                redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
             }),
@@ -267,5 +288,15 @@ impl TryFrom<types::RefundsResponseRouterData<api::RSync, RefundResponse>> for t
 pub struct CashtocodeErrorResponse {
     pub error: String,
     pub error_description: String,
-    pub errors: Vec<Box<CashtocodeErrors>>,
+    pub errors: Option<Vec<Box<CashtocodeErrors>>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CashtocodeIncomingWebhook {
+    pub amount: i64,
+    pub currency: String,
+    pub foreign_transaction_id: String,
+    pub r#type : String,
+    pub transaction_id : String,
 }
